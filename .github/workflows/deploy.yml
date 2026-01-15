@@ -1,0 +1,16 @@
+name: Deploy to Void
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: karimStekelenburg/void-deploy/.github/workflows/deploy-to-dokploy.yml@main
+    secrets:
+      TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+      DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+    with:
+      application_id: ${{ vars.DOKPLOY_APP_ID }}
