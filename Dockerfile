@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     ca-certificates \
     gnupg \
+    socat \
     && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI (gh)
