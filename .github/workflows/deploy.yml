@@ -7,10 +7,42 @@ on:
 
 jobs:
   deploy:
-    uses: karimStekelenburg/void-deploy/.github/workflows/deploy-to-dokploy.yml@main
-    secrets:
-      TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-      TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
-      DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
-    with:
-      application_id: ${{ vars.DOKPLOY_APP_ID }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Wait for Tailscale connection
+        run: |
+          sleep 5
+          tailscale status
+          echo "Testing connection to void..."
+          ping -c 1 void || echo "Ping failed but continuing..."
+
+      - name: Trigger Dokploy deployment
+        run: |
+          echo "Triggering deployment for application: ${{ vars.DOKPLOY_APP_ID }}"
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -d '{"json":{"applicationId":"${{ vars.DOKPLOY_APP_ID }}"}}' \
+            "http://void:3000/api/trpc/application.deploy")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response: $BODY"
+          echo "HTTP Status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Deployment trigger failed!"
+            exit 1
+          fi
+
+          echo "Deployment triggered successfully!"
